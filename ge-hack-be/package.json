@@ -9,10 +9,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.19.0",
     "crypto": "^1.0.1",
     "crypto-js": "^4.0.0",
+    "date": "^1.0.2",
+    "express": "^4.17.1",
     "filereader": "^0.10.3",
     "fs": "0.0.1-security",
+    "https": "^1.0.0",
+    "mongoose": "^5.10.15",
     "path": "^0.12.7",
     "stream": "0.0.2",
     "zlib": "^1.0.5"
