@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "ge-medical-block": {
+      "hosting": {
+        "ge-hack-frontend": [
+          "ge-medical-block"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "default": "ge-medical-block"
+  }
+}
