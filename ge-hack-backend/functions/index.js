@@ -57,7 +57,6 @@ async function decodeIDToken(req, res) {
 }
 
 async function queryBCOneParam(param, route, req, res) {
-  console.log(req.query);
 
   if (!(param in req.query)) {
     res.status(400).send("Need parameter ", param);
@@ -71,7 +70,6 @@ async function queryBCOneParam(param, route, req, res) {
   })
     .then(response => response.json())
     .then(data => {
-      console.log(data);
       return res.status(200).send(data);
     })
     .catch(err => {
@@ -80,16 +78,38 @@ async function queryBCOneParam(param, route, req, res) {
 }
 
 
-app.get("/medicalRecord/hospital/list", async (req, res) => {
+app.get("/hospital/medicalRecord/", async (req, res) => {
   await queryBCOneParam("hospital", "HospitalAccessedMedicalRecords", req, res);
 });
-
-app.get("/medicalRecord/provider/list", async (req, res) => {
-  await queryBCOneParam("iProvider", "IProviderAccessedMedicalRecords", req, res);
+app.get("/hospital/insuranceRecord/", async (req, res) => {
+  await queryBCOneParam("hospital", "HospitalAccessedInsuranceRecords", req, res);
+});
+app.get("/hospital/invoice/", async (req, res) => {
+  await queryBCOneParam("hospital", "HospitalInvoices", req, res);
 });
 
-app.get("/medicalRecord/user/list", async (req, res) => {
+app.get("/provider/medicalRecord/", async (req, res) => {
+  await queryBCOneParam("iProvider", "IProviderAccessedMedicalRecords", req, res);
+});
+app.get("/provider/insuranceRecord/", async (req, res) => {
+  await queryBCOneParam("iProvider", "IProviderAccessedInsuranceRecords", req, res);
+});
+app.get("/provider/invoice/", async (req, res) => {
+  await queryBCOneParam("iProvider", "IProviderAccessedInvoices", req, res);
+});
+
+app.get("/dCenter/medicalRecord/", async (req, res) => {
+  await queryBCOneParam("dCenter", "DCenterAccessedMedicalRecords", req, res);
+});
+
+app.get("/user/medicalRecord/", async (req, res) => {
   await queryBCOneParam("user", "UserMedicalRecords", req, res);
+});
+app.get("/user/insuranceRecord/", async (req, res) => {
+  await queryBCOneParam("user", "UserInsuranceRecords", req, res);
+});
+app.get("/user/invoice/", async (req, res) => {
+  await queryBCOneParam("user", "UserInvoices", req, res);
 });
 
 
