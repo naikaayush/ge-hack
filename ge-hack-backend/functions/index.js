@@ -77,6 +77,21 @@ async function queryBCOneParam(param, route, req, res) {
     });
 }
 
+async function addMedicalRecord(userType, req, res) {
+  let body = Object.assign({}, req.body);
+  delete body[userType];
+  body[`${userType}sWithAccess`] = [req.body[userType]];
+  body["$class"] = "orange.medicalblocks.MedicalRecord";
+
+  await postJSON("/MedicalRecord", body, res);
+}
+
+async function addInsuranceRecord(req, res) {
+  let body = Object.assign({}, req.body);
+  body["$class"] = "orange.medicalblocks.InsuranceRecord";
+
+  await postJSON("/InsuranceRecord", body, res);
+}
 
 app.get("/hospital/medicalRecord/", async (req, res) => {
   await queryBCOneParam("hospital", "HospitalAccessedMedicalRecords", req, res);
@@ -87,6 +102,12 @@ app.get("/hospital/insuranceRecord/", async (req, res) => {
 app.get("/hospital/invoice/", async (req, res) => {
   await queryBCOneParam("hospital", "HospitalInvoices", req, res);
 });
+app.post("/hospital/invoice/", async (req, res) => {
+  await addEntity("Invoice", req, res);
+});
+app.post("/hospital/medicalRecord/", async (req, res) => {
+  await addMedicalRecord("hospital", req, res);
+});
 
 app.get("/provider/medicalRecord/", async (req, res) => {
   await queryBCOneParam("iProvider", "IProviderAccessedMedicalRecords", req, res);
@@ -94,12 +115,18 @@ app.get("/provider/medicalRecord/", async (req, res) => {
 app.get("/provider/insuranceRecord/", async (req, res) => {
   await queryBCOneParam("iProvider", "IProviderAccessedInsuranceRecords", req, res);
 });
+app.post("/provider/insuranceRecord/", async (req, res) => {
+  await addInsuranceRecord(req, res);
+});
 app.get("/provider/invoice/", async (req, res) => {
   await queryBCOneParam("iProvider", "IProviderAccessedInvoices", req, res);
 });
 
 app.get("/dCenter/medicalRecord/", async (req, res) => {
   await queryBCOneParam("dCenter", "DCenterAccessedMedicalRecords", req, res);
+});
+app.post("/dCenter/medicalRecord/", async (req, res) => {
+  await addMedicalRecord("dCenter", req, res);
 });
 
 app.get("/user/medicalRecord/", async (req, res) => {
@@ -126,14 +153,12 @@ async function getBC(route, req, res) {
     });
 }
 
-async function postBC(entity, req, res) {
-  let body = req.body;
-  body["$class"] = `orange.medicalblocks.${entity}`;
+async function postJSON(route, body, res) {
   const headers = {
     "Content-Type": "application/json"
   }
 
-  fetch(bApiUrl + `/${entity}`, {
+  fetch(bApiUrl + route, {
     method: "POST",
     headers: headers,
     body: JSON.stringify(body)
@@ -147,12 +172,37 @@ async function postBC(entity, req, res) {
     });
 }
 
+async function addEntity(entity, req, res) {
+  let body = req.body;
+  body["$class"] = `orange.medicalblocks.${entity}`;
+
+  await postJSON(`/${entity}`, body, res);
+}
+
 app.get("/admin/hospital", async (req, res) => {
   await getBC("/Hospital", req, res);
 });
 
 app.post("/admin/hospital", async (req, res) => {
-  await postBC("Hospital", req, res);
+  admin
+    .auth()
+    .createUser({
+      email: req.body.email,
+      emailVerified: false,
+      displayName: req.body.name
+    })
+    .then(async (userRecord) => {
+      req.body = {
+        hId: userRecord.uid,
+        hName: userRecord.displayName
+      }
+      console.log(req.body);
+      await addEntity("Hospital", req, res);
+      return true;
+    })
+    .catch((error) => {
+      res.status(500).send(error);
+    })
 });
 
 app.get("/admin/diagCenter", async (req, res) => {
@@ -160,7 +210,7 @@ app.get("/admin/diagCenter", async (req, res) => {
 });
 
 app.post("/admin/diagCenter", async (req, res) => {
-  await postBC("DiagCenter", req, res);
+  await addEntity("DiagCenter", req, res);
 });
 
 app.get("/admin/iProvider", async (req, res) => {
@@ -168,5 +218,5 @@ app.get("/admin/iProvider", async (req, res) => {
 });
 
 app.post("/admin/iProvider", async (req, res) => {
-  await postBC("InsuranceProvider", req, res);
+  await addEntity("InsuranceProvider", req, res);
 });
