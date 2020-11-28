@@ -91,3 +91,62 @@ app.get("/medicalRecord/provider/list", async (req, res) => {
 app.get("/medicalRecord/user/list", async (req, res) => {
   await queryBCOneParam("user", "UserMedicalRecords", req, res);
 });
+
+
+async function getBC(route, req, res) {
+  fetch(bApiUrl + route, {
+    method: "GET",
+  })
+    .then(response => response.json())
+    .then(data => {
+      return res.status(200).send(data);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+}
+
+async function postBC(entity, req, res) {
+  let body = req.body;
+  body["$class"] = `orange.medicalblocks.${entity}`;
+  const headers = {
+    "Content-Type": "application/json"
+  }
+
+  fetch(bApiUrl + `/${entity}`, {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify(body)
+  })
+    .then(response => response.json())
+    .then(data => {
+      return res.status(200).send(data);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+}
+
+app.get("/admin/hospital", async (req, res) => {
+  await getBC("/Hospital", req, res);
+});
+
+app.post("/admin/hospital", async (req, res) => {
+  await postBC("Hospital", req, res);
+});
+
+app.get("/admin/diagCenter", async (req, res) => {
+  await getBC("/DiagCenter", req, res);
+});
+
+app.post("/admin/diagCenter", async (req, res) => {
+  await postBC("DiagCenter", req, res);
+});
+
+app.get("/admin/iProvider", async (req, res) => {
+  await getBC("/InsuranceProvider", req, res);
+});
+
+app.post("/admin/iProvider", async (req, res) => {
+  await postBC("InsuranceProvider", req, res);
+});
