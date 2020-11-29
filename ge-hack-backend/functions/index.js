@@ -190,10 +190,11 @@ app.get("/user/views/medicalRecord/:userId", async (req, res) => {
     console.log("No matching documents.");
     return;
   }
+  const arr = [];
   snapshot.forEach((doc) => {
-    res.send({id: doc.id, data: doc.data()});
+    arr.push({id: doc.id, data: doc.data()});
   });
-  // await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
+  res.send(arr);
 });
 
 // app.get("/user/medicalRecord/", async (req, res) => {
@@ -329,4 +330,25 @@ app.post("/requestAccess", async (req, res) => {
   req.body.reqDateTime = admin.firestore.Timestamp.now();
   let added = await requestsCollection.add(req.body);
   res.send(added.id);
+});
+
+// trusted contacts
+app.post("/user/trustedContact/", async (req, res) => {
+  const userId = req.body.userId;
+  const contactId = req.body.contactId;
+
+  const userRef = db.collection("users").doc(userId);
+  const user = userRef.get().data();
+  if ("trustedContacts" in user) {
+    user.trustedContacts.push(contactId);
+  } else {
+    user.trustedContacts = [contactId];
+  }
+  userRef.set(user).then(() => {
+    res.send("Added contact");
+    return;
+  }
+  ).catch((err) => {
+    res.status(500).send(err);
+  });
 });
