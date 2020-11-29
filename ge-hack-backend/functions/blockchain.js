@@ -1,11 +1,12 @@
-const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
+const serviceAccount = require("./service-account.json");
 
 //initialize firebase inorder to access its services
-admin.initializeApp(functions.config().firebase);
-exports.admin = admin;
-exports.functions = functions;
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://ge-medical-block.firebaseio.com/"
+});
 
 // blockchain API details
 const bApiUrl = 'http://35.247.157.19:3000/api';
@@ -38,14 +39,14 @@ exports.addMedicalRecord = async (userType, req, res) => {
   body[`${userType}sWithAccess`] = [req.body[userType]];
   body["$class"] = "orange.medicalblocks.MedicalRecord";
 
-  await postJSON("/MedicalRecord", body, res);
+  await exports.postJSON("/MedicalRecord", body, res);
 }
 
 exports.addInsuranceRecord = async (req, res) => {
   let body = Object.assign({}, req.body);
   body["$class"] = "orange.medicalblocks.InsuranceRecord";
 
-  await postJSON("/InsuranceRecord", body, res);
+  await exports.postJSON("/InsuranceRecord", body, res);
 }
 
 exports.getBC = async (route, req, res) => {
@@ -82,12 +83,14 @@ exports.postJSON = async (route, body, res) => {
 
 exports.addEntity = async (entity, req, res) => {
   let body = req.body;
+  console.log(body);
   body["$class"] = `orange.medicalblocks.${entity}`;
+  console.log(body);
 
-  await postJSON(`/${entity}`, body, res);
+  await exports.postJSON(`/${entity}`, body, res);
 }
 
-exports.createUser = async (userType, req, res) => {
+exports.createUser = async (userType, collection, prefix, req, res) => {
   admin
     .auth()
     .createUser({
@@ -96,12 +99,12 @@ exports.createUser = async (userType, req, res) => {
       displayName: req.body.name
     })
     .then(async (userRecord) => {
-      req.body = {
-        hId: userRecord.uid,
-        hName: userRecord.displayName
-      }
-      console.log(req.body);
-      await addEntity(userType, req, res);
+      body = Object.assign({}, req.body);
+      req.body = {}
+      req.body[`${prefix}Id`] = userRecord.uid;
+      req.body[`${prefix}Name`] = userRecord.displayName;
+      await collection.doc(userRecord.uid).set(body);
+      await exports.addEntity(userType, req, res);
       return true;
     })
     .catch((error) => {
