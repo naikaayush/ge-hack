@@ -12,7 +12,7 @@ const main = express();
 //add the path to receive request and set json as bodyParser to process the body
 main.use("/api/v1", app);
 main.use(bodyParser.json());
-main.use(bodyParser.urlencoded({ extended: false }));
+main.use(bodyParser.urlencoded({extended: false}));
 app.use(fileUpload({
   debug: true
 }));
@@ -42,8 +42,8 @@ const dCenterCollection = db.collection("dCenter");
 exports.webApi = functions.https.onRequest(main);
 
 
- // Create and Deploy Your First Cloud Functions
- // https://firebase.google.com/docs/functions/write-firebase-functions
+// Create and Deploy Your First Cloud Functions
+// https://firebase.google.com/docs/functions/write-firebase-functions
 
 // exports.helloWorld = functions.https.onRequest((request, response) => {
 //   functions.logger.info("Hello logs!", {structuredData: true});
@@ -135,6 +135,13 @@ app.post("/dCenter/medicalRecord/", async (req, res) => {
 app.get("/user/get/:id", async (req, res) => {
   await bc.getBC(`/User/${req.params.id}`, req, res);
 });
+app.post("/user/add", async (req, res) => {
+  let postData = {
+    "$class": "orange.medicalblocks.User",
+    "userId": req.body.uid
+  };
+  await bc.postJSON("/User", postData, res);
+});
 app.get("/user/medicalRecord/", async (req, res) => {
   await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
 });
@@ -147,17 +154,17 @@ app.get("/user/invoice/", async (req, res) => {
 app.get("/user/getUid/", async (req, res) => {
   if ("phoneNumber" in req.query) {
     admin
-    .auth()
-    .getUserByPhoneNumber("+" + req.query.phoneNumber)
-    .then((userRecord) => {
-      console.log(`Successfully fetched user data:  ${userRecord.toJSON()}`);
-      res.status(200).send(userRecord);
-      return true;
-    })
-    .catch((error) => {
-      console.log('Error fetching user data:', error);
-      res.status(500).send(error);
-    });
+      .auth()
+      .getUserByPhoneNumber("+" + req.query.phoneNumber)
+      .then((userRecord) => {
+        console.log(`Successfully fetched user data:  ${userRecord.toJSON()}`);
+        res.status(200).send(userRecord);
+        return true;
+      })
+      .catch((error) => {
+        console.log('Error fetching user data:', error);
+        res.status(500).send(error);
+      });
   } else {
     res.status(400).send("Not enough parameters");
   }
@@ -175,17 +182,17 @@ app.get("/admin/getCustomToken", async (req, res) => {
     return;
   }
   admin
-  .auth()
-  .createCustomToken(req.query.uid)
-  .then((customToken) => {
-    // Send token back to client
-    res.status(200).send(customToken);
-    return;
-  })
-  .catch((error) => {
-    console.log('Error creating custom token:', error);
-    res.status(500).send(error);
-  });
+    .auth()
+    .createCustomToken(req.query.uid)
+    .then((customToken) => {
+      // Send token back to client
+      res.status(200).send(customToken);
+      return;
+    })
+    .catch((error) => {
+      console.log('Error creating custom token:', error);
+      res.status(500).send(error);
+    });
 });
 
 app.post("/admin/hospital", async (req, res) => {
