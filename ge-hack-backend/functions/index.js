@@ -1,5 +1,6 @@
 const express = require("express");
 const fileUpload = require("express-fileupload");
+const multer = require('multer');
 const bodyParser = require("body-parser");
 const bc = require("./blockchain");
 const functions = require("firebase-functions");
@@ -13,9 +14,8 @@ const main = express();
 main.use("/api/v1", app);
 main.use(bodyParser.json());
 main.use(bodyParser.urlencoded({extended: false}));
-app.use(fileUpload({
-  debug: true
-}));
+const upload = multer();
+
 // app.use(decodeIDToken);
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -34,6 +34,7 @@ app.use((req, res, next) => {
 const db = admin.firestore();
 // const userCollection = "users";
 const medicalRecordCollection = db.collection("medicalRecord");
+const requestsCollection = db.collection("requests");
 const hospitalCollection = db.collection("hospital");
 const providerCollection = db.collection("provider");
 const dCenterCollection = db.collection("dCenter");
@@ -109,8 +110,9 @@ app.get("/hospital/invoice/", async (req, res) => {
 app.post("/hospital/invoice/", async (req, res) => {
   await bc.addEntity("Invoice", req, res);
 });
-app.post("/hospital/medicalRecord/", async (req, res) => {
-  console.log(req.files);
+app.post("/hospital/medicalRecord/", upload.single("recordFile"), async (req, res) => {
+  console.log(req);
+  console.log(req.file);
   // console.log(req.files.recordFile);
   res.send("yay");
   // await bc.addMedicalRecord("hospital", req, res);
@@ -176,105 +178,155 @@ app.post("/user/add", async (req, res) => {
 });
 app.get("/user/medicalRecord/", async (req, res) => {
   await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
+});
 
-  // app.get("/user/get/:id", async (req, res) => {
-  //   await bc.getBC(`/User/${req.params.id}`, req, res);
-  // });
-  app.get("/user/views/medicalRecord/:userId", async (req, res) => {
-    const userRef = db.collection("medicalRecord");
-    const snapshot = await userRef.where("uid", "==", req.params.userId).get();
-    if (snapshot.empty) {
-      console.log("No matching documents.");
-      return;
-    }
-    snapshot.forEach((doc) => {
-      res.send({id: doc.id, data: doc.data()});
-    });
-    // await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
+// app.get("/user/get/:id", async (req, res) => {
+//   await bc.getBC(`/User/${req.params.id}`, req, res);
+// });
+app.get("/user/views/medicalRecord/:userId", async (req, res) => {
+  const userRef = db.collection("medicalRecord");
+  const snapshot = await userRef.where("uid", "==", req.params.userId).get();
+  if (snapshot.empty) {
+    console.log("No matching documents.");
+    return;
+  }
+  snapshot.forEach((doc) => {
+    res.send({id: doc.id, data: doc.data()});
   });
+  // await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
+});
 
-  // app.get("/user/medicalRecord/", async (req, res) => {
-  //   await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
-  // });
-  app.get("/user/insuranceRecord/", async (req, res) => {
-    await bc.queryBCOneParam("user", "UserInsuranceRecords", req, res);
-  });
-  app.get("/user/invoice/", async (req, res) => {
-    await bc.queryBCOneParam("user", "UserInvoices", req, res);
-  });
-  app.get("/user/getUid/", async (req, res) => {
-    if ("phoneNumber" in req.query) {
-      admin
-        .auth()
-        .getUserByPhoneNumber("+" + req.query.phoneNumber)
-        .then((userRecord) => {
-          console.log(`Successfully fetched user data:  ${userRecord.toJSON()}`);
-          res.status(200).send(userRecord);
-          return true;
-        })
-        .catch((error) => {
-          console.log("Error fetching user data:", error);
-          res.status(500).send(error);
-        });
-    } else {
-      res.status(400).send("Not enough parameters");
-    }
-  });
-
-  // admin
-  app.get("/admin/hospital", async (req, res) => {
-    await bc.getBC("/Hospital", req, res);
-  });
-
-  app.get("/admin/getCustomToken", async (req, res) => {
-    if (!("uid" in req.query)) {
-      res.status(400).send("Need uid");
-      return;
-    }
+// app.get("/user/medicalRecord/", async (req, res) => {
+//   await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
+// });
+app.get("/user/insuranceRecord/", async (req, res) => {
+  await bc.queryBCOneParam("user", "UserInsuranceRecords", req, res);
+});
+app.get("/user/invoice/", async (req, res) => {
+  await bc.queryBCOneParam("user", "UserInvoices", req, res);
+});
+app.get("/user/getUid/", async (req, res) => {
+  if ("phoneNumber" in req.query) {
     admin
       .auth()
-      .createCustomToken(req.query.uid)
-      .then((customToken) => {
-        // Send token back to client
-        res.status(200).send(customToken);
-        return;
+      .getUserByPhoneNumber("+" + req.query.phoneNumber)
+      .then((userRecord) => {
+        console.log(`Successfully fetched user data:  ${userRecord.toJSON()}`);
+        res.status(200).send(userRecord);
+        return true;
       })
       .catch((error) => {
-        console.log("Error creating custom token:", error);
+        console.log("Error fetching user data:", error);
         res.status(500).send(error);
       });
-  });
-
-  app.post("/admin/hospital", async (req, res) => {
-    await bc.createUser("Hospital", hospitalCollection, "h", req, res);
-  });
-
-  app.get("/admin/diagCenter", async (req, res) => {
-    await bc.getBC("/DiagCenter", req, res);
-  });
-
-  app.post("/admin/diagCenter", async (req, res) => {
-    await bc.createUser("DiagCenter", dCenterCollection, "dCentre", req, res);
-  });
-
-  app.get("/admin/iProvider", async (req, res) => {
-    await bc.getBC("/InsuranceProvider", req, res);
-  });
-
-  app.post("/admin/iProvider", async (req, res) => {
-    await bc.createUser("InsuranceProvider", providerCollection, "i", req, res);
-  });
-
-  // medical record access
-  async function grantAccess(req, res) {
-    let body = Object.assign({}, req.body);
-    body["$class"] = "orange.medicalblocks.GrantAccess";
-
-    await bc.postJSON("/GrantAccess", body, res);
+  } else {
+    res.status(400).send("Not enough parameters");
   }
-  app.post("/medicalRecord/grantAccess", async (req, res) => {
-    await grantAccess(req, res);
-  });
-  app.post("/insuranceRecord/grantAccess", async (req, res) => {
-    await grantAccess(req, res);
-  });
+});
+
+// admin
+app.get("/admin/hospital", async (req, res) => {
+  await bc.getBC("/Hospital", req, res);
+});
+
+app.get("/admin/getCustomToken", async (req, res) => {
+  if (!("uid" in req.query)) {
+    res.status(400).send("Need uid");
+    return;
+  }
+  admin
+    .auth()
+    .createCustomToken(req.query.uid)
+    .then((customToken) => {
+      // Send token back to client
+      res.status(200).send(customToken);
+      return;
+    })
+    .catch((error) => {
+      console.log("Error creating custom token:", error);
+      res.status(500).send(error);
+    });
+});
+
+app.post("/admin/hospital", async (req, res) => {
+  await bc.createUser("Hospital", hospitalCollection, "h", req, res);
+});
+
+app.get("/admin/diagCenter", async (req, res) => {
+  await bc.getBC("/DiagCenter", req, res);
+});
+
+app.post("/admin/diagCenter", async (req, res) => {
+  await bc.createUser("DiagCenter", dCenterCollection, "dCentre", req, res);
+});
+
+app.get("/admin/iProvider", async (req, res) => {
+  await bc.getBC("/InsuranceProvider", req, res);
+});
+
+app.post("/admin/iProvider", async (req, res) => {
+  await bc.createUser("InsuranceProvider", providerCollection, "i", req, res);
+});
+
+// medical record access
+async function grantAccess(body, res) {
+  body["$class"] = "orange.medicalblocks.GrantAccess";
+
+  await bc.postJSON("/GrantAccess", body, res);
+}
+async function revokeAccess(body, res) {
+  body["$class"] = "orange.medicalblocks.RemoveAccess";
+
+  await bc.postJSON("/RemoveAccess", body, res);
+}
+app.post("/grantAccess", async (req, res) => {
+  const requestId = req.body.requestId;
+  const requestRef = requestsCollection.doc(requestId);
+  const request = (await requestRef.get()).data();
+  request.accessStatus = true;
+  request.ackDateTime = admin.firestore.Timestamp.now();
+  console.log(request);
+  await requestRef.update(request);
+  const bRequest = {};
+  const required = {
+    mRecord: null,
+    iRecord: null,
+    hospital: null,
+    iProvider: null,
+    dCenter: null
+  };
+  for (const p in request) {
+    if (p in required)
+      bRequest[p] = request[p];
+  }
+  await grantAccess(bRequest, res);
+});
+app.post("/revokeAccess", async (req, res) => {
+  const requestId = req.body.requestId;
+  const requestRef = requestsCollection.doc(requestId);
+  const request = (await requestRef.get()).data();
+  request.revokedStatus = true;
+  request.accessStatus = false;
+  request.revokeDateTime = admin.firestore.Timestamp.now();
+  console.log(request);
+  await requestRef.update(request);
+  const bRequest = {};
+  const required = {
+    mRecord: null,
+    iRecord: null,
+    hospital: null,
+    iProvider: null,
+    dCenter: null
+  };
+  for (const p in request) {
+    if (p in required)
+      bRequest[p] = request[p];
+  }
+  await revokeAccess(bRequest, res);
+});
+app.post("/requestAccess", async (req, res) => {
+  console.log("Requesting access", req.body);
+  req.body.reqDateTime = admin.firestore.Timestamp.now();
+  let added = await requestsCollection.add(req.body);
+  res.send(added.id);
+});
