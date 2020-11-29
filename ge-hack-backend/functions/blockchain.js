@@ -103,8 +103,10 @@ exports.createUser = async (userType, collection, prefix, req, res) => {
       req.body = {}
       req.body[`${prefix}Id`] = userRecord.uid;
       req.body[`${prefix}Name`] = userRecord.displayName;
-      await collection.doc(userRecord.uid).set(body);
-      await exports.addEntity(userType, req, res);
+      await Promise.all([
+        collection.doc(userRecord.uid).set(body),
+        exports.addEntity(userType, req, res)
+      ]);
       return true;
     })
     .catch((error) => {
