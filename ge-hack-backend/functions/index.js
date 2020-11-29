@@ -34,6 +34,7 @@ app.use((req, res, next) => {
 const db = admin.firestore();
 // const userCollection = "users";
 const medicalRecordCollection = db.collection("medicalRecord");
+const userCollection = db.collection("users");
 const requestsCollection = db.collection("requests");
 const hospitalCollection = db.collection("hospital");
 const providerCollection = db.collection("provider");
@@ -337,8 +338,8 @@ app.post("/user/trustedContact/", async (req, res) => {
   const userId = req.body.userId;
   const contactId = req.body.contactId;
 
-  const userRef = db.collection("users").doc(userId);
-  const user = userRef.get().data();
+  const userRef = userCollection.doc(userId);
+  const user = (await userRef.get()).data();
   if ("trustedContacts" in user) {
     user.trustedContacts.push(contactId);
   } else {
@@ -351,4 +352,23 @@ app.post("/user/trustedContact/", async (req, res) => {
   ).catch((err) => {
     res.status(500).send(err);
   });
+});
+
+app.get("/user/trustedBy/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+
+  const users = await userCollection.where("trustedContacts", "array-contains", userId).get();
+
+  if (users.empty) {
+    res.send('No matching documents.');
+    return;
+  }
+
+  const arr = [];
+  users.forEach(doc => {
+    console.log(doc.id, '=>', doc.data());
+    arr.push({id: doc.id, data: doc.data});
+  });
+  res.send(arr);
 });
