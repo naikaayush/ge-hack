@@ -1,10 +1,14 @@
 const express = require("express");
-const fileUpload = require("express-fileupload");
 const multer = require('multer');
 const bodyParser = require("body-parser");
 const bc = require("./blockchain");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const cors = require("cors");
+const Busboy = require("busboy");
+const os = require("os");
+const path = require("path");
+const fs = require("fs");
 
 //initialize express server
 const app = express();
@@ -14,6 +18,7 @@ const main = express();
 main.use("/api/v1", app);
 main.use(bodyParser.json());
 main.use(bodyParser.urlencoded({extended: false}));
+app.use(cors({origin: true}));
 const upload = multer();
 
 // app.use(decodeIDToken);
@@ -371,4 +376,48 @@ app.get("/user/trustedBy/:userId", async (req, res) => {
     arr.push({id: doc.id, data: doc.data});
   });
   res.send(arr);
+});
+
+
+exports.uploadFile = functions.https.onRequest((req, res) => {
+  cors(req, res, () => {
+    if (req.method !== "POST") {
+      return res.status(500).json({
+        message: "Not allowed"
+      });
+    }
+    const busboy = new Busboy({headers: req.headers});
+    let uploadData = null;
+
+    busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
+      const filepath = path.join(os.tmpdir(), filename);
+      uploadData = {file: filepath, type: mimetype};
+      file.pipe(fs.createWriteStream(filepath));
+    });
+
+    busboy.on("finish", () => {
+      const bucket = admin.storage.bucket("ge-medical-block-demo.appspot.com");
+      bucket
+        .upload(uploadData.file, {
+          uploadType: "media",
+          metadata: {
+            metadata: {
+              contentType: uploadData.type
+            }
+          }
+        })
+        .then(() => {
+          res.status(200).json({
+            message: "It worked!"
+          });
+          return;
+        })
+        .catch(err => {
+          res.status(500).json({
+            error: err
+          });
+        });
+    });
+    busboy.end(req.rawBody);
+  });
 });
