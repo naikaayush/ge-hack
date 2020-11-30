@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const bodyParser = require("body-parser");
+const fetch = require("node-fetch");
 const bc = require("./blockchain");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
@@ -18,8 +19,8 @@ const main = express();
 //add the path to receive request and set json as bodyParser to process the body
 main.use("/api/v1", app);
 main.use(bodyParser.json());
-main.use(bodyParser.urlencoded({ extended: false }));
-app.use(cors({ origin: true }));
+main.use(bodyParser.urlencoded({extended: false}));
+app.use(cors({origin: true}));
 const upload = multer();
 
 // app.use(decodeIDToken);
@@ -145,8 +146,8 @@ app.post("/hospital/medicalRecord", async (req, res) => {
   req.body.hospital = req.body.hospitalId;
   delete req.body.hospitalId;
   console.log(req.body);
-  await bc.addMedicalRecord("hospital", req, res, { sand: false });
-  res.send({ id: res1.id });
+  await bc.addMedicalRecord("hospital", req, res, {sand: false});
+  res.send({id: res1.id});
 });
 
 app.post("/hospital/medicalRecord/addUrl", async (req, res) => {
@@ -156,7 +157,7 @@ app.post("/hospital/medicalRecord/addUrl", async (req, res) => {
     {
       url: req.body.url,
     },
-    { merge: true }
+    {merge: true}
   );
   res.status(200).send("done");
 });
@@ -235,7 +236,7 @@ app.get("/user/views/medicalRecord/:userId", async (req, res) => {
   }
   const arr = [];
   snapshot.forEach((doc) => {
-    arr.push({ id: doc.id, data: doc.data() });
+    arr.push({id: doc.id, data: doc.data()});
   });
   res.send(arr);
 });
@@ -422,9 +423,34 @@ app.get("/user/trustedBy/:userId", async (req, res) => {
   const arr = [];
   users.forEach((doc) => {
     console.log(doc.id, "=>", doc.data());
-    arr.push({ id: doc.id, data: doc.data });
+    arr.push({id: doc.id, data: doc.data});
   });
   res.send(arr);
+});
+
+
+app.post("/medicalRecord/verifyHash", async (req, res) => {
+  let hash = req.body.hash;
+  let fileId = req.body.fileId;
+
+  fetch(bc.bApiUrl + `/MedicalRecord/${fileId}`, {
+    method: "GET",
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      let actualHash = data.mRecordHash;
+      console.log(hash, actualHash);
+      if (actualHash === hash) {
+        res.status(200).send({"matched": true});
+        return true;
+      } else {
+        res.status(201).send({"matched": false});
+        return false;
+      }
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
 });
 
 const gcconfig = {
@@ -433,7 +459,7 @@ const gcconfig = {
 };
 
 // const gcs = require("@google-cloud/storage")(gcconfig);
-const { Storage } = require("@google-cloud/storage");
+const {Storage} = require("@google-cloud/storage");
 const gcs = new Storage(gcconfig);
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
@@ -446,12 +472,12 @@ exports.uploadFile = functions.https.onRequest((req, res) => {
         message: "Not allowed",
       });
     }
-    const busboy = new Busboy({ headers: req.headers });
+    const busboy = new Busboy({headers: req.headers});
     let uploadData = null;
 
     busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
       const filepath = path.join(os.tmpdir(), filename);
-      uploadData = { file: filepath, type: mimetype };
+      uploadData = {file: filepath, type: mimetype};
       file.pipe(fs.createWriteStream(filepath));
     });
 
