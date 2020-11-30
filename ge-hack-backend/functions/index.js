@@ -381,8 +381,10 @@ app.post("/revokeAccess", async (req, res) => {
 app.post("/requestAccess", async (req, res) => {
   console.log("Requesting access", req.body);
   req.body.reqDateTime = admin.firestore.Timestamp.now();
+  req.body.accessStatus = false;
+  req.body.revokedStatus = false;
   let added = await requestsCollection.add(req.body);
-  res.send(added.id);
+  res.send({id: added.id});
 });
 
 // trusted contacts
@@ -453,57 +455,3 @@ app.post("/medicalRecord/verifyHash", async (req, res) => {
     });
 });
 
-const gcconfig = {
-  projectId: "ge-medical-block",
-  keyFilename: "service-account.json",
-};
-
-// const gcs = require("@google-cloud/storage")(gcconfig);
-const {Storage} = require("@google-cloud/storage");
-const gcs = new Storage(gcconfig);
-// // Create and Deploy Your First Cloud Functions
-// // https://firebase.google.com/docs/functions/write-firebase-functions
-//
-
-exports.uploadFile = functions.https.onRequest((req, res) => {
-  cors(req, res, () => {
-    if (req.method !== "POST") {
-      return res.status(500).json({
-        message: "Not allowed",
-      });
-    }
-    const busboy = new Busboy({headers: req.headers});
-    let uploadData = null;
-
-    busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
-      const filepath = path.join(os.tmpdir(), filename);
-      uploadData = {file: filepath, type: mimetype};
-      file.pipe(fs.createWriteStream(filepath));
-    });
-
-    busboy.on("finish", () => {
-      const bucket = gcs.bucket("ge-medical-block-demo");
-      bucket
-        .upload(uploadData.file, {
-          uploadType: "media",
-          metadata: {
-            metadata: {
-              contentType: uploadData.type,
-            },
-          },
-        })
-        .then(() => {
-          res.status(200).json({
-            message: "It worked!",
-          });
-          return message;
-        })
-        .catch((err) => {
-          res.status(500).json({
-            error: err,
-          });
-        });
-    });
-    busboy.end(req.rawBody);
-  });
-});
