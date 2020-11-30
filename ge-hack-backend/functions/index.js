@@ -224,14 +224,10 @@ app.get("/user/medicalRecord/", async (req, res) => {
   await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
 });
 
-// app.get("/user/get/:id", async (req, res) => {
-//   await bc.getBC(`/User/${req.params.id}`, req, res);
-// });
-app.get("/user/views/medicalRecord/:userId", async (req, res) => {
-  const userRef = db.collection("medicalRecord");
-  const snapshot = await userRef.where("uid", "==", req.params.userId).get();
+// VIEWS
+async function sendSnapshot(snapshot, res) {
   if (snapshot.empty) {
-    console.log("No matching documents.");
+    res.send([]);
     return;
   }
   const arr = [];
@@ -239,7 +235,42 @@ app.get("/user/views/medicalRecord/:userId", async (req, res) => {
     arr.push({id: doc.id, data: doc.data()});
   });
   res.send(arr);
+}
+app.get("/user/views/medicalRecord/:userId", async (req, res) => {
+  const snapshot = await medicalRecordCollection.where("uid", "==", req.params.userId).get();
+  await sendSnapshot(snapshot, res);
 });
+app.get("/user/views/requests/pending/:userId", async (req, res) => {
+  const snapshot = await requestsCollection
+    .where("ownerId", "==", req.params.userId)
+    .where("accessStatus", "==", false).where("revokedStatus", "==", false).get();
+  await sendSnapshot(snapshot, res);
+});
+app.get("/user/views/requests/granted/:userId", async (req, res) => {
+  const snapshot = await requestsCollection
+    .where("ownerId", "==", req.params.userId)
+    .where("accessStatus", "==", true).where("revokedStatus", "==", false).get();
+  await sendSnapshot(snapshot, res);
+});
+app.get("/user/views/requests/revoked/:userId", async (req, res) => {
+  const snapshot = await requestsCollection
+    .where("ownerId", "==", req.params.userId)
+    .where("accessStatus", "==", false).where("revokedStatus", "==", true).get();
+  await sendSnapshot(snapshot, res);
+});
+app.get("/hospital/views/requests/pending/:hospitalId", async (req, res) => {
+  const snapshot = await requestsCollection
+    .where("hospital", "==", req.params.hospitalId)
+    .where("accessStatus", "==", false).where("revokedStatus", "==", false).get();
+  await sendSnapshot(snapshot, res);
+});
+app.get("/hospital/views/requests/granted/:hospitalId", async (req, res) => {
+  const snapshot = await requestsCollection
+    .where("hospital", "==", req.params.hospitalId)
+    .where("accessStatus", "==", true).where("revokedStatus", "==", false).get();
+  await sendSnapshot(snapshot, res);
+});
+
 
 // app.get("/user/medicalRecord/", async (req, res) => {
 //   await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
@@ -353,6 +384,8 @@ app.post("/grantAccess", async (req, res) => {
   };
   for (const p in request) {
     if (p in required) bRequest[p] = request[p];
+    else if (p === "hospital") bRequest[p] = "orange.medicalblocks.Hospital#" + request[p];
+    else if (p === "mRecord") bRequest[p] = "orange.medicalblocks.MedicalRecord#" + request[p];
   }
   await grantAccess(bRequest, res);
 });
