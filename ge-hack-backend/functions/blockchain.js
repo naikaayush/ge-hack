@@ -6,6 +6,7 @@ const serviceAccount = require("./service-account.json");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://ge-medical-block.firebaseio.com/",
+  storageBucket: "ge-medical-block-demo.appspot.com"
 });
 
 // blockchain API details
@@ -61,7 +62,7 @@ exports.getBC = async (route, req, res) => {
     });
 };
 
-exports.postJSON = async (route, body, res, options = { sand: true }) => {
+exports.postJSON = async (route, body, res, options = {sand: true}) => {
   const headers = {
     "Content-Type": "application/json",
   };
