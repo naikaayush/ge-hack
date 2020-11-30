@@ -10,7 +10,7 @@
         {{ toDateTime(a.data.date._seconds) }}
       </mat-grid-tile>
       <mat-grid-tile colspan="2">
-        <button (click)="webAuthSignin(a.data.url)">
+        <button (click)="webAuthSignin(a.data.url, a.id)">
           <mat-icon aria-hidden="false" aria-label="Example home icon">
             cloud_download
           </mat-icon>
