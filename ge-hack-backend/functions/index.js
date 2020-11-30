@@ -139,12 +139,12 @@ app.post("/hospital/medicalRecord", async (req, res) => {
     date: FieldValue.serverTimestamp(),
   });
   console.log(res1.id);
-  req.body.mRecordId = res1.id;
-  req.body.owner = "orange.medicalblocks.User#" + req.body.owner;
-  req.body.hospitalsWithAccess = [
-    "orange.medicalblocks.Hospital#" + req.body.hospitalId,
-  ];
+  req.body["mRecordId"] = res1.id;
+  req.body["$class"] = "orange.medicalblocks.MedicalRecord";
+  req.body["owner"] = "resource:orange.medicalblocks.User#" + req.body.owner;
+  req.body.hospital = req.body.hospitalId;
   delete req.body.hospitalId;
+  console.log(req.body);
   await bc.addMedicalRecord("hospital", req, res, { sand: false });
   res.send({ id: res1.id });
 });
