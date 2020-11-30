@@ -1,10 +1,11 @@
 const express = require("express");
-const multer = require('multer');
+const multer = require("multer");
 const bodyParser = require("body-parser");
 const bc = require("./blockchain");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const cors = require("cors");
+// const cors = require("cors");
 const Busboy = require("busboy");
 const os = require("os");
 const path = require("path");
@@ -17,8 +18,8 @@ const main = express();
 //add the path to receive request and set json as bodyParser to process the body
 main.use("/api/v1", app);
 main.use(bodyParser.json());
-main.use(bodyParser.urlencoded({extended: false}));
-app.use(cors({origin: true}));
+main.use(bodyParser.urlencoded({ extended: false }));
+app.use(cors({ origin: true }));
 const upload = multer();
 
 // app.use(decodeIDToken);
@@ -116,12 +117,48 @@ app.get("/hospital/invoice/", async (req, res) => {
 app.post("/hospital/invoice/", async (req, res) => {
   await bc.addEntity("Invoice", req, res);
 });
-app.post("/hospital/medicalRecord/", upload.single("recordFile"), async (req, res) => {
-  console.log(req);
-  console.log(req.file);
-  // console.log(req.files.recordFile);
-  res.send("yay");
-  // await bc.addMedicalRecord("hospital", req, res);
+
+// app.post(
+//   "/hospital/medicalRecord/",
+//   upload.single("recordFile"),
+//   async (req, res) => {
+//     console.log(req);
+//     console.log(req.file);
+//     // console.log(req.files.recordFile);
+//     res.send("yay");
+//     // await bc.addMedicalRecord("hospital", req, res);
+//   }
+// );
+const FieldValue = admin.firestore.FieldValue;
+
+app.post("/hospital/medicalRecord", async (req, res) => {
+  res1 = await medicalRecordCollection.add({
+    uid: req.body.owner,
+    name: req.body.doctorName,
+    hospital: req.body.hospitalId,
+    date: FieldValue.serverTimestamp(),
+  });
+  console.log(res1.id);
+  req.body.mRecordId = res1.id;
+  req.body.owner = "orange.medicalblocks.User#" + req.body.owner;
+  req.body.hospitalsWithAccess = [
+    "orange.medicalblocks.Hospital#" + req.body.hospitalId,
+  ];
+  delete req.body.hospitalId;
+  await bc.addMedicalRecord("hospital", req, res, { sand: false });
+  res.send({ id: res1.id });
+});
+
+app.post("/hospital/medicalRecord/addUrl", async (req, res) => {
+  const recRef = medicalRecordCollection.doc(req.body.id);
+
+  const res1 = await recRef.set(
+    {
+      url: req.body.url,
+    },
+    { merge: true }
+  );
+  res.status(200).send("done");
 });
 
 app.get("/provider/get/:id", async (req, res) => {
@@ -177,8 +214,8 @@ app.get("/user/get/:id", async (req, res) => {
 });
 app.post("/user/add", async (req, res) => {
   let postData = {
-    "$class": "orange.medicalblocks.User",
-    "userId": req.body.uid
+    $class: "orange.medicalblocks.User",
+    userId: req.body.uid,
   };
   await bc.postJSON("/User", postData, res);
 });
@@ -198,7 +235,7 @@ app.get("/user/views/medicalRecord/:userId", async (req, res) => {
   }
   const arr = [];
   snapshot.forEach((doc) => {
-    arr.push({id: doc.id, data: doc.data()});
+    arr.push({ id: doc.id, data: doc.data() });
   });
   res.send(arr);
 });
@@ -228,6 +265,17 @@ app.get("/user/getUid/", async (req, res) => {
       });
   } else {
     res.status(400).send("Not enough parameters");
+  }
+});
+
+app.get("/admin/getBioData/:uid", async (req, res) => {
+  const userRef = db.collection("users").doc(req.params.uid);
+  const doc = await userRef.get();
+  if (!doc.exists) {
+    console.log("No such document!");
+  } else {
+    res.send(doc.data().credentials);
+    console.log("Document data:", doc.data().credentials);
   }
 });
 
@@ -300,11 +348,10 @@ app.post("/grantAccess", async (req, res) => {
     iRecord: null,
     hospital: null,
     iProvider: null,
-    dCenter: null
+    dCenter: null,
   };
   for (const p in request) {
-    if (p in required)
-      bRequest[p] = request[p];
+    if (p in required) bRequest[p] = request[p];
   }
   await grantAccess(bRequest, res);
 });
@@ -323,11 +370,10 @@ app.post("/revokeAccess", async (req, res) => {
     iRecord: null,
     hospital: null,
     iProvider: null,
-    dCenter: null
+    dCenter: null,
   };
   for (const p in request) {
-    if (p in required)
-      bRequest[p] = request[p];
+    if (p in required) bRequest[p] = request[p];
   }
   await revokeAccess(bRequest, res);
 });
@@ -350,71 +396,85 @@ app.post("/user/trustedContact/", async (req, res) => {
   } else {
     user.trustedContacts = [contactId];
   }
-  userRef.set(user).then(() => {
-    res.send("Added contact");
-    return;
-  }
-  ).catch((err) => {
-    res.status(500).send(err);
-  });
+  userRef
+    .set(user)
+    .then(() => {
+      res.send("Added contact");
+      return;
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
 });
 
 app.get("/user/trustedBy/:userId", async (req, res) => {
   const userId = req.params.userId;
 
-
-  const users = await userCollection.where("trustedContacts", "array-contains", userId).get();
+  const users = await userCollection
+    .where("trustedContacts", "array-contains", userId)
+    .get();
 
   if (users.empty) {
-    res.send('No matching documents.');
+    res.send("No matching documents.");
     return;
   }
 
   const arr = [];
-  users.forEach(doc => {
-    console.log(doc.id, '=>', doc.data());
-    arr.push({id: doc.id, data: doc.data});
+  users.forEach((doc) => {
+    console.log(doc.id, "=>", doc.data());
+    arr.push({ id: doc.id, data: doc.data });
   });
   res.send(arr);
 });
 
+const gcconfig = {
+  projectId: "ge-medical-block",
+  keyFilename: "service-account.json",
+};
+
+// const gcs = require("@google-cloud/storage")(gcconfig);
+const { Storage } = require("@google-cloud/storage");
+const gcs = new Storage(gcconfig);
+// // Create and Deploy Your First Cloud Functions
+// // https://firebase.google.com/docs/functions/write-firebase-functions
+//
 
 exports.uploadFile = functions.https.onRequest((req, res) => {
   cors(req, res, () => {
     if (req.method !== "POST") {
       return res.status(500).json({
-        message: "Not allowed"
+        message: "Not allowed",
       });
     }
-    const busboy = new Busboy({headers: req.headers});
+    const busboy = new Busboy({ headers: req.headers });
     let uploadData = null;
 
     busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
       const filepath = path.join(os.tmpdir(), filename);
-      uploadData = {file: filepath, type: mimetype};
+      uploadData = { file: filepath, type: mimetype };
       file.pipe(fs.createWriteStream(filepath));
     });
 
     busboy.on("finish", () => {
-      const bucket = admin.storage.bucket("ge-medical-block-demo.appspot.com");
+      const bucket = gcs.bucket("ge-medical-block-demo");
       bucket
         .upload(uploadData.file, {
           uploadType: "media",
           metadata: {
             metadata: {
-              contentType: uploadData.type
-            }
-          }
+              contentType: uploadData.type,
+            },
+          },
         })
         .then(() => {
           res.status(200).json({
-            message: "It worked!"
+            message: "It worked!",
           });
-          return;
+          return message;
         })
-        .catch(err => {
+        .catch((err) => {
           res.status(500).json({
-            error: err
+            error: err,
           });
         });
     });
