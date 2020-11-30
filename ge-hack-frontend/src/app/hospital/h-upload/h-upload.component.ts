@@ -40,6 +40,7 @@ export class HUploadComponent implements OnInit {
   }
 
   phone: string;
+  hash: any;
 
   openSnackBar(message: string, action: string) {
     this._snackBar.open(message, action, {
@@ -58,7 +59,12 @@ export class HUploadComponent implements OnInit {
   async createmRecordFireStore(name, uid, hId, callback) {
     const headers = { 'Content-Type': 'application/json' };
 
-    const body = { doctorName: name, owner: uid, hospitalId: hId };
+    const body = {
+      doctorName: name,
+      owner: uid,
+      hospitalId: hId,
+      mRecordHash: this.hash,
+    };
     console.log(body);
     this.http
       .post<any>(this.POST_URL, body, {
@@ -184,51 +190,82 @@ export class HUploadComponent implements OnInit {
 
     console.log('Uploading to Fire');
     console.log(this.recordName, uid, this.uid);
-    await this.createmRecordFireStore(
-      this.recordName,
-      uid,
-      this.uid,
-      (filename) => {
-        console.log(filename);
-        const storageRef = this.otherBucket.ref().child(filename);
 
-        let file = event.target.files[0];
-        console.log(file);
-        let reader = new FileReader();
+    let file = event.target.files[0];
+    console.log(file);
+    let reader = new FileReader();
 
-        reader.onload = (e) => {
-          console.log('Encrypting');
-          let encrypted = CryptoJS.AES.encrypt(
-            this._arrayBufferToBase64(e.target.result),
-            this.key
-          );
-          console.log(encrypted);
+    reader.onload = (e) => {
+      console.log('Encrypting');
+      let encrypted = CryptoJS.AES.encrypt(
+        this._arrayBufferToBase64(e.target.result),
+        this.key
+      );
+      console.log(encrypted);
 
-          encrypted = encrypted.toString();
+      encrypted = encrypted.toString();
 
-          console.log(encrypted);
-          let encryptedFile = new File([encrypted], file.name + '.encrypted', {
-            type: file.type,
-          });
-          console.log('encrypted', encryptedFile);
-          this.openSnackBar('encrypted ' + encryptedFile.name, 'close');
+      console.log(encrypted);
+      let encryptedFile = new File([encrypted], file.name + '.encrypted', {
+        type: file.type,
+      });
+      console.log('encrypted', encryptedFile);
+      this.openSnackBar('encrypted ' + encryptedFile.name, 'close');
 
-          this.hashFile(encryptedFile);
-          //TODO get mRecordId
-          const fname = uid + '/' + 'mRecordId';
-          //TODO
-          storageRef.put(encryptedFile).then((snapshot) => {
-            console.log('Uploaded a blob or file!', snapshot);
+      this.hash = this.hashFile(encryptedFile);
 
-            storageRef.getDownloadURL().then((url) => {
-              console.log(url);
-              this.addmRecordURL(filename, url);
+      this.createmRecordFireStore(
+        this.recordName,
+        uid,
+        this.uid,
+        (filename) => {
+          console.log(filename);
+          const storageRef = this.otherBucket.ref().child(filename);
+
+          let file = event.target.files[0];
+          console.log(file);
+          let reader = new FileReader();
+
+          reader.onload = (e) => {
+            console.log('Encrypting');
+            let encrypted = CryptoJS.AES.encrypt(
+              this._arrayBufferToBase64(e.target.result),
+              this.key
+            );
+            console.log(encrypted);
+
+            encrypted = encrypted.toString();
+
+            console.log(encrypted);
+            let encryptedFile = new File(
+              [encrypted],
+              file.name + '.encrypted',
+              {
+                type: file.type,
+              }
+            );
+            console.log('encrypted', encryptedFile);
+            this.openSnackBar('encrypted ' + encryptedFile.name, 'close');
+
+            this.hash = this.hashFile(encryptedFile);
+            //TODO get mRecordId
+            const fname = uid + '/' + 'mRecordId';
+            //TODO
+            storageRef.put(encryptedFile).then((snapshot) => {
+              console.log('Uploaded a blob or file!', snapshot);
+
+              storageRef.getDownloadURL().then((url) => {
+                console.log(url);
+                this.addmRecordURL(filename, url);
+              });
             });
-          });
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    );
+          };
+          reader.readAsArrayBuffer(file);
+        }
+      );
+    };
+
+    reader.readAsArrayBuffer(file);
 
     // console.log(res.uid);
     // console.log('uploading');

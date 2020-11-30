@@ -102,7 +102,7 @@ export class UserMedRecordsComponent implements OnInit {
     console.log(this.auth.authState.uid);
     return this.auth.authState.uid;
   }
-  decrypt(key, url) {
+  decrypt(key, url, fileId) {
     console.log(url);
 
     console.log(url);
@@ -128,11 +128,41 @@ export class UserMedRecordsComponent implements OnInit {
           let decryptedFile = new File([decrypted], file2.name + '.dec', {
             type: file2.type,
           });
-          saveAs(decryptedFile, 'report.pdf');
+
+          const hash = this.hashFile(decryptedFile);
+          this.verifyHash(fileId, hash, () => {
+            saveAs(decryptedFile, 'report.pdf');
+          });
         };
         reader2.readAsArrayBuffer(file2);
       });
   }
+
+  verifyHash(fileId, hash, callback) {
+    const headers = { 'Content-Type': 'application/json' };
+
+    const body = {
+      fileId: fileId,
+      hash: hash,
+    };
+    this.http
+      .post<any>(this.HASH_URL, body, {
+        headers,
+      })
+      .subscribe((data) => {
+        // this.fileName = data.id;
+        if (data.matched) {
+          this.openSnackBar('Hash Verified', 'Close');
+          callback();
+          return true;
+        } else {
+          this.openSnackBar('Hash Invalid', 'Close');
+          return false;
+        }
+      });
+  }
+  HASH_URL =
+    'https://us-central1-ge-medical-block.cloudfunctions.net/webApi/api/v1/medicalRecord/verifyHash';
 
   _arrayBufferToBase64(buffer) {
     let binary = '';
@@ -153,7 +183,19 @@ export class UserMedRecordsComponent implements OnInit {
     }
     return bytes.buffer;
   }
-  async webAuthSignin(url) {
+
+  hashFile(file) {
+    const readStream = file;
+    var wordArray = CryptoJS.lib.WordArray.create(readStream);
+    var hash = CryptoJS.SHA256(wordArray);
+    var hashed = hash.toString();
+    console.log(file);
+    console.log(hashed);
+    return hashed;
+  }
+  // fileId: any;
+  async webAuthSignin(url, fileId) {
+    // this.fileId = fileId;
     // const res = await this.http
     //   .get<any>(
     //     'https://us-central1-ge-medical-block.cloudfunctions.net/webApi/api/v1/user/getUid?phoneNumber=' +
@@ -181,7 +223,7 @@ export class UserMedRecordsComponent implements OnInit {
         // this.x.credentials
         const key = btoa(JSON.stringify(this.bio));
         console.log('key', key);
-        this.decrypt(key, url);
+        this.decrypt(key, url, fileId);
 
         // console.log('SUCCESSFULLY GOT AN ASSERTION!', response);
 
@@ -202,5 +244,10 @@ export class UserMedRecordsComponent implements OnInit {
         alert('🚫 Sorry :( Invalid credentials!');
         console.log('FAIL', error);
       });
+  }
+  openSnackBar(message: string, action: string) {
+    this._snackBar.open(message, action, {
+      duration: 5000,
+    });
   }
 }
