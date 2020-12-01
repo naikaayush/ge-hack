@@ -19,8 +19,8 @@ const main = express();
 //add the path to receive request and set json as bodyParser to process the body
 main.use("/api/v1", app);
 main.use(bodyParser.json());
-main.use(bodyParser.urlencoded({ extended: false }));
-app.use(cors({ origin: true }));
+main.use(bodyParser.urlencoded({extended: false}));
+app.use(cors({origin: true}));
 const upload = multer();
 
 // app.use(decodeIDToken);
@@ -146,8 +146,8 @@ app.post("/hospital/medicalRecord", async (req, res) => {
   req.body.hospital = req.body.hospitalId;
   delete req.body.hospitalId;
   console.log(req.body);
-  await bc.addMedicalRecord("hospital", req, res, { sand: false });
-  res.send({ id: res1.id });
+  await bc.addMedicalRecord("hospital", req, res, {sand: false});
+  res.send({id: res1.id});
 });
 
 app.post("/hospital/medicalRecord/addUrl", async (req, res) => {
@@ -157,7 +157,7 @@ app.post("/hospital/medicalRecord/addUrl", async (req, res) => {
     {
       url: req.body.url,
     },
-    { merge: true }
+    {merge: true}
   );
   res.status(200).send("done");
 });
@@ -232,7 +232,7 @@ async function sendSnapshot(snapshot, res) {
   }
   const arr = [];
   snapshot.forEach((doc) => {
-    arr.push({ id: doc.id, data: doc.data() });
+    arr.push({id: doc.id, data: doc.data()});
   });
   res.send(arr);
 }
@@ -442,10 +442,28 @@ app.post("/requestAccess", async (req, res) => {
   req.body.accessStatus = false;
   req.body.revokedStatus = false;
   let added = await requestsCollection.add(req.body);
-  res.send({ id: added.id });
+  res.send({id: added.id});
 });
 
 // trusted contacts
+app.get("/user/trustedContacts/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+  const user = (await userCollection.doc(userId).get()).data();
+  const trustedContactsRefs = [];
+  user.trustedContacts.forEach(tuid => {
+    trustedContactsRefs.push(userCollection.doc(tuid).get());
+  });
+  const trustedContactsObjs = await Promise.all(trustedContactsRefs);
+  const trustedContacts = trustedContactsObjs.map(x => {
+    let data = x.data();
+    return {
+      name: data.name,
+      uid: data.uid
+    }
+  });
+  res.send(trustedContacts);
+});
 app.post("/user/trustedContact/", async (req, res) => {
   const userId = req.body.userId;
   const contactId = req.body.contactId;
@@ -483,7 +501,7 @@ app.get("/user/trustedBy/:userId", async (req, res) => {
   const arr = [];
   users.forEach((doc) => {
     console.log(doc.id, "=>", doc.data());
-    arr.push({ id: doc.id, data: doc.data });
+    arr.push({id: doc.id, data: doc.data});
   });
   res.send(arr);
 });
@@ -500,10 +518,10 @@ app.post("/medicalRecord/verifyHash", async (req, res) => {
       let actualHash = data.mRecordHash;
       console.log(hash, actualHash);
       if (actualHash === hash) {
-        res.status(200).send({ matched: true });
+        res.status(200).send({matched: true});
         return true;
       } else {
-        res.status(201).send({ matched: false });
+        res.status(201).send({matched: false});
         return false;
       }
     })
