@@ -485,6 +485,27 @@ app.post("/user/trustedContact/", async (req, res) => {
       res.status(500).send(err);
     });
 });
+app.post("/user/trustedContact/revoke", async (req, res) => {
+  const userId = req.body.userId;
+  const contactId = req.body.contactId;
+
+  const userRef = userCollection.doc(userId);
+  const user = (await userRef.get()).data();
+  if ("trustedContacts" in user) {
+    user.trustedContacts = user.trustedContacts.filter((tc) => tc != contactId);
+  } else {
+    user.trustedContacts = [];
+  }
+  userRef
+    .set(user)
+    .then(() => {
+      res.send("Removed contact");
+      return;
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
+});
 
 app.get("/user/trustedBy/:userId", async (req, res) => {
   const userId = req.params.userId;
