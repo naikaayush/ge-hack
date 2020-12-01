@@ -9,6 +9,7 @@ import { LoginPhoneComponent } from './user/login-phone/login-phone.component';
 import { UserDashComponent } from './user/user-dash/user-dash.component';
 import { UserLoginComponent } from './user/user-login/user-login.component';
 import { UserSignUpComponent } from './user/user-sign-up/user-sign-up.component';
+import { UVRequestsComponent } from './user/views/u-v-requests/u-v-requests.component';
 import { UserMedRecordsComponent } from './user/views/user-med-records/user-med-records.component';
 
 const routes: Routes = [
@@ -23,6 +24,7 @@ const routes: Routes = [
   { path: 'user/dash/mRecord', component: UserMedRecordsComponent },
   { path: 'hospital/login', component: HLoginComponent },
   { path: 'hospital/dash', component: HDashComponent },
+  { path: 'user/dash/viewPendingReq', component: UVRequestsComponent },
 ];
 
 @NgModule({

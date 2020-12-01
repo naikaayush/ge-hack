@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HauthService } from 'src/app/services/hospital/hauth.service';
+import { GeneralService } from 'src/app/services/general.service';
 
 @Component({
   selector: 'app-h-upload',
@@ -24,7 +25,8 @@ export class HUploadComponent implements OnInit {
     private http: HttpClient,
     private afStorage: AngularFireStorage,
     private _snackBar: MatSnackBar,
-    public hauth: HauthService
+    public hauth: HauthService,
+    public gen: GeneralService
   ) {
     this.defaultBucket = this.afStorage.storage.app.storage();
     this.otherBucket = this.afStorage.storage.app.storage(
@@ -166,16 +168,18 @@ export class HUploadComponent implements OnInit {
   }
 
   async upload(event) {
-    const res = await this.http
-      .get<any>(
-        'https://us-central1-ge-medical-block.cloudfunctions.net/webApi/api/v1/user/getUid?phoneNumber=' +
-          this.phone
-      )
-      .toPromise();
-    // console.log('AAAA');
-    // console.log(res.uid);
+    // const res = await this.http
+    //   .get<any>(
+    //     'https://us-central1-ge-medical-block.cloudfunctions.net/webApi/api/v1/user/getUid?phoneNumber=' +
+    //       this.phone
+    //   )
+    //   .toPromise();
+    // // console.log('AAAA');
+    // // console.log(res.uid);
     // console.log('AAAAA');
-    const uid = res.uid;
+    // const uid = res.uid;
+
+    const uid = await this.gen.getUIDfromPhone(this.phone);
 
     console.log('AAAAA');
     console.log(uid);

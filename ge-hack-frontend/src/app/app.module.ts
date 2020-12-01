@@ -44,6 +44,10 @@ import { AdminlistComponent } from './admin/adminlist/adminlist.component';
 import { HLoginComponent } from './hospital/h-login/h-login.component';
 import { HDashComponent } from './hospital/h-dash/h-dash.component';
 import { HUploadComponent } from './hospital/h-upload/h-upload.component';
+import { HUserRecordsComponent } from './hospital/h-user-records/h-user-records.component';
+import { URecordRequestAccessComponent } from './hospital/u-record-request-access/u-record-request-access.component';
+import { UVRequestsComponent } from './user/views/u-v-requests/u-v-requests.component';
+import { HViewWithAccessComponent } from './hospital/h-view-with-access/h-view-with-access.component';
 
 const firebaseUiAuthConfig: firebaseui.auth.Config = {
   signInFlow: 'popup',
@@ -77,6 +81,10 @@ const firebaseUiAuthConfig: firebaseui.auth.Config = {
     HLoginComponent,
     HDashComponent,
     HUploadComponent,
+    HUserRecordsComponent,
+    URecordRequestAccessComponent,
+    UVRequestsComponent,
+    HViewWithAccessComponent,
   ],
   imports: [
     BrowserModule,
