@@ -19,8 +19,8 @@ const main = express();
 //add the path to receive request and set json as bodyParser to process the body
 main.use("/api/v1", app);
 main.use(bodyParser.json());
-main.use(bodyParser.urlencoded({extended: false}));
-app.use(cors({origin: true}));
+main.use(bodyParser.urlencoded({ extended: false }));
+app.use(cors({ origin: true }));
 const upload = multer();
 
 // app.use(decodeIDToken);
@@ -146,8 +146,8 @@ app.post("/hospital/medicalRecord", async (req, res) => {
   req.body.hospital = req.body.hospitalId;
   delete req.body.hospitalId;
   console.log(req.body);
-  await bc.addMedicalRecord("hospital", req, res, {sand: false});
-  res.send({id: res1.id});
+  await bc.addMedicalRecord("hospital", req, res, { sand: false });
+  res.send({ id: res1.id });
 });
 
 app.post("/hospital/medicalRecord/addUrl", async (req, res) => {
@@ -157,7 +157,7 @@ app.post("/hospital/medicalRecord/addUrl", async (req, res) => {
     {
       url: req.body.url,
     },
-    {merge: true}
+    { merge: true }
   );
   res.status(200).send("done");
 });
@@ -232,45 +232,68 @@ async function sendSnapshot(snapshot, res) {
   }
   const arr = [];
   snapshot.forEach((doc) => {
-    arr.push({id: doc.id, data: doc.data()});
+    arr.push({ id: doc.id, data: doc.data() });
   });
   res.send(arr);
 }
 app.get("/user/views/medicalRecord/:userId", async (req, res) => {
-  const snapshot = await medicalRecordCollection.where("uid", "==", req.params.userId).get();
+  const snapshot = await medicalRecordCollection
+    .where("uid", "==", req.params.userId)
+    .get();
   await sendSnapshot(snapshot, res);
 });
 app.get("/user/views/requests/pending/:userId", async (req, res) => {
   const snapshot = await requestsCollection
     .where("ownerId", "==", req.params.userId)
-    .where("accessStatus", "==", false).where("revokedStatus", "==", false).get();
+    .where("accessStatus", "==", false)
+    .where("revokedStatus", "==", false)
+    .get();
   await sendSnapshot(snapshot, res);
 });
 app.get("/user/views/requests/granted/:userId", async (req, res) => {
   const snapshot = await requestsCollection
     .where("ownerId", "==", req.params.userId)
-    .where("accessStatus", "==", true).where("revokedStatus", "==", false).get();
+    .where("accessStatus", "==", true)
+    .where("revokedStatus", "==", false)
+    .get();
   await sendSnapshot(snapshot, res);
 });
 app.get("/user/views/requests/revoked/:userId", async (req, res) => {
   const snapshot = await requestsCollection
     .where("ownerId", "==", req.params.userId)
-    .where("accessStatus", "==", false).where("revokedStatus", "==", true).get();
+    .where("accessStatus", "==", false)
+    .where("revokedStatus", "==", true)
+    .get();
   await sendSnapshot(snapshot, res);
 });
 app.get("/hospital/views/requests/pending/:hospitalId", async (req, res) => {
   const snapshot = await requestsCollection
     .where("hospital", "==", req.params.hospitalId)
-    .where("accessStatus", "==", false).where("revokedStatus", "==", false).get();
+    .where("accessStatus", "==", false)
+    .where("revokedStatus", "==", false)
+    .get();
   await sendSnapshot(snapshot, res);
 });
 app.get("/hospital/views/requests/granted/:hospitalId", async (req, res) => {
   const snapshot = await requestsCollection
     .where("hospital", "==", req.params.hospitalId)
-    .where("accessStatus", "==", true).where("revokedStatus", "==", false).get();
+    .where("accessStatus", "==", true)
+    .where("revokedStatus", "==", false)
+    .get();
   await sendSnapshot(snapshot, res);
 });
-
+//Get mRecord details with ID
+app.get("/user/views/mRecordId/:mRecordId", async (req, res) => {
+  const snapshot = await medicalRecordCollection
+    .doc(req.params.mRecordId)
+    .get();
+  res.send(snapshot.data());
+});
+//Get Hospital Name from UID
+app.get("/user/views/getHospitalName/:hId", async (req, res) => {
+  const snapshot = await hospitalCollection.doc(req.params.hId).get();
+  res.send(snapshot.data());
+});
 
 // app.get("/user/medicalRecord/", async (req, res) => {
 //   await bc.queryBCOneParam("user", "UserMedicalRecords", req, res);
@@ -384,8 +407,10 @@ app.post("/grantAccess", async (req, res) => {
   };
   for (const p in request) {
     if (p in required) bRequest[p] = request[p];
-    else if (p === "hospital") bRequest[p] = "orange.medicalblocks.Hospital#" + request[p];
-    else if (p === "mRecord") bRequest[p] = "orange.medicalblocks.MedicalRecord#" + request[p];
+    else if (p === "hospital")
+      bRequest[p] = "orange.medicalblocks.Hospital#" + request[p];
+    else if (p === "mRecord")
+      bRequest[p] = "orange.medicalblocks.MedicalRecord#" + request[p];
   }
   await grantAccess(bRequest, res);
 });
@@ -417,7 +442,7 @@ app.post("/requestAccess", async (req, res) => {
   req.body.accessStatus = false;
   req.body.revokedStatus = false;
   let added = await requestsCollection.add(req.body);
-  res.send({id: added.id});
+  res.send({ id: added.id });
 });
 
 // trusted contacts
@@ -458,11 +483,10 @@ app.get("/user/trustedBy/:userId", async (req, res) => {
   const arr = [];
   users.forEach((doc) => {
     console.log(doc.id, "=>", doc.data());
-    arr.push({id: doc.id, data: doc.data});
+    arr.push({ id: doc.id, data: doc.data });
   });
   res.send(arr);
 });
-
 
 app.post("/medicalRecord/verifyHash", async (req, res) => {
   let hash = req.body.hash;
@@ -476,10 +500,10 @@ app.post("/medicalRecord/verifyHash", async (req, res) => {
       let actualHash = data.mRecordHash;
       console.log(hash, actualHash);
       if (actualHash === hash) {
-        res.status(200).send({"matched": true});
+        res.status(200).send({ matched: true });
         return true;
       } else {
-        res.status(201).send({"matched": false});
+        res.status(201).send({ matched: false });
         return false;
       }
     })
@@ -487,4 +511,3 @@ app.post("/medicalRecord/verifyHash", async (req, res) => {
       res.status(500).send(err);
     });
 });
-
